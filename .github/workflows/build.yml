@@ -1,5 +1,4 @@
-name: Deploy IRSTesoreria Multitenant
-
+name: Deploy Demo App
 
 on:
   push:
@@ -14,13 +13,6 @@ jobs:
     - name: code checkout
       uses: actions/checkout@v2
 
-    - name: install the gcloud cli
-      uses: google-github-actions/setup-gcloud@v0
-      with:
-        project_id: ${{ secrets.GOOGLE_PROJECT }}
-        service_account_key: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-        export_default_credentials: true
-    
     - name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
@@ -30,18 +22,13 @@ jobs:
     - name: Build with Maven
       run: mvn clean package
     
-    - name: build and push the docker image
-      env:
-        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-      run: |
-        gcloud auth configure-docker us-east1-docker.pkg.dev
-        docker build -t us-east1-docker.pkg.dev/$GOOGLE_PROJECT/multitenant-qas/cyl-mt-mp-concialicion:v1 .
-        docker push us-east1-docker.pkg.dev/$GOOGLE_PROJECT/multitenant-qas/cyl-mt-mp-concialicion:v1
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
 
-    - name: deploy to gke and restart deployment
-      env:
-        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+    - name: Login to IBM Cloud Container Registry
+      run: echo "${{ secrets.IBM_CLOUD_API_KEY }}" | docker login -u iamapikey --password-stdin icr.io
+
+    - name: Build and push Docker image
       run: |
-        gcloud components install kubectl
-        gcloud container clusters get-credentials cluster-mt-qas --zone=us-east1-b --project=$GOOGLE_PROJECT
-        kubectl -n cyl-mt rollout restart deployment/cyl-mt-mp-concialicion
+        docker build -t icr.io/talento-digital/demoapp:latest .
+        docker push icr.io/talento-digital/demoapp:latest
