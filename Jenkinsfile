@@ -2,6 +2,18 @@ pipeline {
     agent any
 
     stages {
+        
+  stage('SCM') {
+    checkout scm
+  }
+        
+  stage('SonarQube Analysis') {
+    def mvn = tool 'Default Maven';
+    withSonarQubeEnv() {
+      sh "${mvn}/bin/mvn clean verify sonar:sonar -Dsonar.projectKey=con-jenkins -Dsonar.projectName='con-jenkins'"
+    }
+  }
+
         stage('Build') {
             steps {
                 echo 'Building...'
